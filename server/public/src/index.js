@@ -8,6 +8,8 @@ import addLayerControl from './addLayerControl';
 import { Spinner } from 'spin.js';
 window.Spinner = Spinner;
 import 'leaflet-spin';
+import 'regenerator-runtime/runtime';
+import 'core-js/stable';
 
 const debug = debugFn('client:index');
 

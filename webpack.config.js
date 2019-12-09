@@ -15,6 +15,9 @@ module.exports = {
         rules: [{
             test: /node_modules\/jsonstream\/index\.js$/,
             loaders: ['shebang-loader']
+        }, {
+            test: /\.(js)$/,
+            use: ['babel-loader']
         }]
     }
 };
