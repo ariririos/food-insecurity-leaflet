@@ -10,9 +10,9 @@ const debugFn = require('debug');
 const { DEBUG: debug } = process.env;
 const geographyName = process.argv[2]; // e.g. "FL_block_2010"
 const divisionName = process.argv[3]; // e.g. COUNTYA
-const censusShape = fs.createReadStream(path.join(__dirname, `join/shape/${geographyName}_shape_census.geojson`)).pipe(JSONStream.parse('features.*'));
-const nhgisShape = fs.createReadStream(path.join(__dirname, `join/shape/${geographyName}_shape_nhgis.geojson`)).pipe(JSONStream.parse('features.*'));
-const data = fs.createReadStream(path.join(__dirname, `join/data/${geographyName}_data.csv`)).pipe(csvParse());
+const censusShape = fs.createReadStream(path.join(__dirname, `../s3/food-insecurity-leaflet/shape/${geographyName}_shape_census.geojson`)).pipe(JSONStream.parse('features.*'));
+const nhgisShape = fs.createReadStream(path.join(__dirname, `../s3/food-insecurity-leaflet/shape/${geographyName}_shape_nhgis.geojson`)).pipe(JSONStream.parse('features.*'));
+const data = fs.createReadStream(path.join(__dirname, `../s3/food-insecurity-leaflet/data/${geographyName}_data.csv`)).pipe(csvParse());
 let i = 1;
 
 process.stdout.write('Finding difference in Census / NHGIS blocks');
@@ -31,7 +31,7 @@ _([censusShape, nhgisShape])
             if (!debug) process.stdout.write('.');
             diffDebug(`Current buffer sizes: census: ${Object.keys(censusShapeBlocksBuffer).length}, nhgis: ${Object.keys(nhgisShapeBlocksBuffer).length}`);
             diffDebug(`Corresponding blocks deleted: census: ${censusDeleted}, nhgis: ${nhgisDeleted}`);
-        };
+        }
         if (chunk.properties) {
             let { GEOID10 } = chunk.properties;
             if (!GEOID10) GEOID10 = chunk.properties.GEOID;
@@ -115,7 +115,7 @@ _([censusShape, nhgisShape])
         ].map(x => [x, true]));
         const joinDebug = debugFn('join');
         let fileWriteStreams = {}; // json will be written to the streams here by their divisionName values
-        const nhgisShape2 = fs.createReadStream(path.join(__dirname, `join/shape/${geographyName}_shape_nhgis.geojson`)).pipe(JSONStream.parse('features.*')); // previous stream is already consumed
+        const nhgisShape2 = fs.createReadStream(path.join(__dirname, `../s3/food-insecurity-leaflet/shape/${geographyName}_shape_nhgis.geojson`)).pipe(JSONStream.parse('features.*')); // previous stream is already consumed
         _([data, nhgisShape2])
             .map(_)
             .merge()
@@ -205,28 +205,28 @@ _([censusShape, nhgisShape])
                     if (!fileWriteStreams[propValue]) {
                         // check if directory structure exists first and create if not
                         try {
-                            fs.statSync(path.join(__dirname, `join/output/${geographyName}`));
+                            fs.statSync(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}`));
                         }
                         catch (e) {
                             if (e.code === 'ENOENT') {
-                                fs.mkdirSync(path.join(__dirname, `join/output/${geographyName}`));
+                                fs.mkdirSync(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}`));
                             }
                             else {
                                 throw e;
                             }
                         }
                         try {
-                            fs.statSync(path.join(__dirname, `join/output/${geographyName}/${divisionName}`));
+                            fs.statSync(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}/${divisionName}`));
                         }
                         catch (e) {
                             if (e.code === 'ENOENT') {
-                                fs.mkdirSync(path.join(__dirname, `join/output/${geographyName}/${divisionName}`));
+                                fs.mkdirSync(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}/${divisionName}`));
                             }
                             else {
                                 throw e;
                             }
                         }
-                        fileWriteStreams[propValue] = fs.createWriteStream(path.join(__dirname, `join/output/${geographyName}/${divisionName}/${propValue}.geojson`));
+                        fileWriteStreams[propValue] = fs.createWriteStream(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}/${divisionName}/${propValue}.geojson`));
                         fileWriteStreams[propValue].write('{"type": "FeatureCollection", "features":[');
                         fileWriteStreams[propValue].write(JSON.stringify(chunk));
                     }
@@ -236,7 +236,7 @@ _([censusShape, nhgisShape])
                 }
                 else {
                     if (Object.values(fileWriteStreams).length === 0) {
-                        fileWriteStreams = fs.createWriteStream(path.join(__dirname, `join/output/${geographyName}_join.geojson`));
+                        fileWriteStreams = fs.createWriteStream(path.join(__dirname, `../s3/food-insecurity-leaflet/output/${geographyName}_join.geojson`));
                         fileWriteStreams.write('{"type": "FeatureCollection", "features":[');
                         fileWriteStreams.write(JSON.stringify(chunk));
                     }
@@ -260,15 +260,15 @@ _([censusShape, nhgisShape])
                 if (!debug) {
                     process.stdout.write('\n');
                     if (divisionName) {
-                        process.stdout.write(`Done! Find joined files at join/output/${geographyName}/${divisionName}/*.geojson\n`);
+                        process.stdout.write(`Done! Find joined files at ../s3/food-insecurity-leaflet/output/${geographyName}/${divisionName}/*.geojson\n`);
                     }
                     else {
-                        process.stdout.write(`Done! Find joined file at join/output/${geographyName}_join.geojson\n`);
+                        process.stdout.write(`Done! Find joined file at ../s3/food-insecurity-leaflet/output/${geographyName}_join.geojson\n`);
                     }
                 }
                 else {
-                    const dataBufferPath = `join/output/${geographyName}_data_buffer.json`;
-                    const shapeBufferPath = `join/output/${geographyName}_shape_buffer.json`;
+                    const dataBufferPath = `../s3/food-insecurity-leaflet/output/${geographyName}_data_buffer.json`;
+                    const shapeBufferPath = `../s3/food-insecurity-leaflet/output/${geographyName}_shape_buffer.json`;
                     // write data buffer in GeoJSON format:
                     const dataBufferGeoJSON = {
                         type: 'FeatureCollection',

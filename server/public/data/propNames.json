@@ -1,5 +1,5 @@
 {
-    "FL_blck_grp_2017": {
+    "FL_blck_grp_2017x": {
         "filters": {
             "COUNTYA": "93"
         },
@@ -95,9 +95,9 @@
             }
         }
     },
-    "FL_block_2010x": {
+    "FL_block_2010": {
         "filters": {
-            "COUNTYA": "93"
+            "COUNTYA": "093"
         },
         "props": {
             "Shape_area":  {
@@ -109,6 +109,36 @@
                 "description": "Total population",
                 "legendName": "Total population",
                 "units": "people / km^2",
+                "normalization": "Shape_area"
+            },
+            "H7Y003": {
+                "description": "# Hispanic or Latino",
+                "legendName": "Population with Hispanic or Latino origin",
+                "units": "people / km^2",
+                "normalization": "Shape_area"
+            },
+            "H8C002": {
+                "description": "# family households",
+                "legendName": "Family households",
+                "units": "households / km^2",
+                "normalization": "Shape_area"
+            },
+            "H8T001": {
+                "description": "# families",
+                "legendName": "Families",
+                "units": "families / km^2",
+                "normalization": "Shape_area"
+            },
+            "IFC001": {
+                "description": "# housing units",
+                "legendName": "Total housing units",
+                "units": "households / km^2",
+                "normalization": "Shape_area"
+            },
+            "IFF004": {
+                "description": "# renter-occupied units",
+                "legendName": "Renter-occupied housing units",
+                "units": "units / km^2",
                 "normalization": "Shape_area"
             }
         }

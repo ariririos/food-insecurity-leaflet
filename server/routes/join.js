@@ -35,7 +35,7 @@ module.exports = async() => {
     router.get('/:shapefile', async (req, res) => {
         const debug = debugFn.extend(req.params.shapefile);
         debug('Request for shapefile ' + req.params.shapefile);
-        if (!(topGeojsonObjs.includes(req.params.shapefile + '_join.geojson') || topDirObjs.includes(req.params.shapefile))) {
+        if (!(topGeojsonObjs.includes(req.params.shapefile + '_join.geojson') || topDirObjs.includes(req.params.shapefile + '/'))) {
             res.status(404).send('Shapefile not found');
             debug('Shapefile not found');
         }
