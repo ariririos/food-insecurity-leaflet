@@ -1,0 +1,145 @@
+{
+    "FL_blck_grp_2017": {
+        "filters": {
+            "COUNTYA": "93"
+        },
+        "props": {
+            "Shape_Area":  {
+                "description": "Area",
+                "legendName": "Block group total area",
+                "units": "km^2"
+            },
+            "AHY1E001": {
+                "description": "Total population",
+                "legendName": "Total population",
+                "units": "people / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH1PE001": {
+                "description": "Median household income, 2017",
+                "legendName": "Median household income in past 12 mon"
+            },
+            "AHZBE003": {
+                "description": "# Hispanic or Latino",
+                "legendName": "Population with Hispanic or Latino origin",
+                "units": "people / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AHZZE002": {
+                "description": "# family households",
+                "legendName": "Family households",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH0LE002": {
+                "description": "# households with 1+ people under 18 yo",
+                "legendName": "# households with 1+ people under 18 yo",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH1HE003": {
+                "description": "# households w/ primary lang Spanish",
+                "legendName": "# households w/ Spanish as primary language",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH19E002": {
+                "description": "# households w/ pub asst income",
+                "legendName": "# households w/ public assistance income in past 12 mon",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH3IE002": {
+                "description": "# households receiving SNAP",
+                "legendName": "# households receiving SNAP in past 12 mon",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH3OM002": {
+                "description": "# people w/ income <  poverty level",
+                "legendName": "Population with income in past 12 mon below poverty level",
+                "units": "people / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH3PM007": {
+                "description": "# people not in labor force",
+                "legendName": "Population 16+ yo not in labor force",
+                "units": "people / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH35M001": {
+                "description": "# housing units",
+                "legendName": "Total housing units",
+                "units": "households / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH37M003": {
+                "description": "# renter-occupied units",
+                "legendName": "Renter-occupied housing units",
+                "units": "units / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH49M010": {
+                "description": "# renter-occupied units w/ no vehicle",
+                "legendName": "Renter-occupied housing units with no vehicle",
+                "units": "units / km^2",
+                "normalization": "Shape_Area"
+            },
+            "AH5RM001": {
+                "description": "Median gross rent",
+                "legendName": "Median gross rent"
+            },
+            "AH5YM001": {
+                "description": "Median gross rent as % of income",
+                "legendName": "Median gross rent as % of income in past 12 mon"
+            }
+        }
+    },
+    "FL_block_2010x": {
+        "filters": {
+            "COUNTYA": "93"
+        },
+        "props": {
+            "Shape_area":  {
+                "description": "Area",
+                "legendName": "Block group total area",
+                "units": "km^2"
+            },
+            "H7V001": {
+                "description": "Total population",
+                "legendName": "Total population",
+                "units": "people / km^2",
+                "normalization": "Shape_area"
+            }
+        }
+    },
+    "MA_block_2010x": {
+        "filters": {
+            "COUNTYA": "011"
+        },
+        "props": {
+            "H7V001": {
+                "description": "Total population",
+                "legendName": "Total population"
+            }
+        }
+    },
+    "MA_blck_grp_2017x": {
+        "filters": {
+            "COUNTYA": "017"
+        },
+        "props": {
+            "Shape_Area":  {
+                "description": "Area",
+                "legendName": "Block group total area",
+                "units": "km^2"
+            },
+            "AHY1E001": {
+                "description": "Total population",
+                "legendName": "Total population",
+                "units": "people / km^2",
+                "normalization": "Shape_Area"
+            }
+        }
+    }
+}

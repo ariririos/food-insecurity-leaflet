@@ -1,0 +1,594 @@
+import L from 'leaflet';
+import 'leaflet.control.layers.tree';
+import colorbrewer from 'colorbrewer';
+import jenks from './jenks.js'
+// import proj4 from 'proj4';
+
+let mapboxToken = "pk.eyJ1IjoicmlvYzA3MTkiLCJhIjoiY2sydTA3NmlsMWgydDNtbWJueDczNTVyYSJ9.OXt2qQjXDCMVpDZA5pf3gw";
+
+const propAliases = {
+    // block group aliases
+    blkGrpPop: "AHY1E001",
+    blkGrpMedianIncome: "AH1PE001",
+    blkGrpPerCapitaIncome: "AH2RE001",
+    blkGrpMedianRent: "AH5RE001",
+    blkGrpMedianRentPercentIncome: "AH5YE001",
+    blkGrpMeanROWWidths: "ROW_Width",
+    // block aliases
+    blkPop: "H7V001",
+    blkRenters: "IFF004",
+    blkFamilies: "H8C002",
+    blkMeanROWWidths: "ROW_Width",
+    blkTrees: "TreeCount",
+    blkLights: "LightCount"
+};
+
+const layerAliases = {
+    // block group data
+    centralMedianIncome: "Median household income in 2017 by block group, Central",
+    porterMedianIncome: "Median household income in 2017 by block group, Porter",
+    centralPerCapitaIncome: "Per capita household income in 2017 by block group, Central",
+    porterPerCapitaIncome: "Per capita household income in 2017 by block group, Porter",
+    centralMedianRent: "Median gross rent by block group, Central",
+    porterMedianRent: "Median gross rent by block group, Porter",
+    centralMedianRentPercentIncome: "Median gross rent as a % of annual household income by block group, Central",
+    porterMedianRentPercentIncome: "Median gross rent as a % of annual household income by block group, Porter",
+    centralPopBlockGroup: "Total population by block group, Central",
+    porterPopBlockGroup: "Total population by block group, Porter",
+    centralMeanROWWidthsBlockGroup: "Mean Right of Way (ROW) Widths by block group, Central",
+    porterMeanROWWidthsBlockGroup: "Mean Right of Way (ROW) Widths by block group, Porter",
+    // block data
+    centralPopBlock: "Total population by block, Central",
+    porterPopBlock: "Total population by block, Porter",
+    centralRenters: "Renter-occupied housing units per block, Central",
+    porterRenters: "Renter-occupied housing units per block, Porter",
+    centralFamilies: "Family households per block, Central",
+    porterFamilies: "Family households per block, Porter",
+    centralMeanROWWidthsBlock: "Mean Right of Way (ROW) Widths by block, Central",
+    porterMeanROWWidthsBlock: "Mean Right of Way (ROW) Widths by block, Porter",
+    centralTrees: "Trees per block, Central",
+    porterTrees: "Trees per block, Porter",
+    centralLights: "Streetlights per block, Central",
+    porterLights: "Streetlights per block, Porter"
+};
+
+let map = L.map('map', {
+    center:  [28.00895171255095, -83.52355957031251], // Florida
+    zoom: 7
+});
+
+let dark = L.tileLayer("https://api.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={mapboxToken}", { id: 'mapbox.dark', mapboxToken });
+let light = L.tileLayer("https://api.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={mapboxToken}", { id: 'mapbox.light', mapboxToken });
+light.addTo(map);
+
+function projectFeaturesToWGS84(features) {
+    // FIXME: not dealing with multipolygons here
+    return features.filter(feat => feat.geometry.type == "Polygon").map(feat => {
+        let featCopy = Object.assign(feat);
+        featCopy.geometry.coordinates = [feat.geometry.coordinates[0].map(coordPair => {
+            let firstProj = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m no_defs";
+            let secondProj = "WGS84";
+            throw new Error('no projecting in prod');
+            // return proj4(firstProj, secondProj, coordPair);
+        })];
+        return featCopy;
+    });
+}
+
+async function createChloroplethLayer(geojson, shortPropName, longPropName, colorSchemeName, project, legendName) {
+
+    let moddedGeojson = {
+        type: geojson.type,
+        crs: geojson.crs,
+        features: project ? projectFeaturesToWGS84(geojson.features) : geojson.features
+    }
+
+    const featPropGetter = feat => feat.properties[shortPropName];
+
+    let propValues = moddedGeojson.features.map(feat => featPropGetter(feat)).filter(x => x != null);
+    let propClasses = jenks(propValues, 5);
+
+    let getColorForPolygon = v => {
+        let colorBracket = 0;
+        for (let i = 0; i < propClasses.length - 1; i++) {
+            if (v > propClasses[i]) colorBracket = i;
+        }
+        return colorbrewer[colorSchemeName][5][colorBracket];
+    };
+    let polygonIdsByColor = moddedGeojson.features.reduce((acc, feat) => {
+        acc[feat.id] = getColorForPolygon(featPropGetter(feat));
+        return acc;
+    }, {});
+
+    let style = feature => ({
+        fillColor: polygonIdsByColor[feature.id],
+        weight: 2,
+        fillOpacity: 0.5
+    });
+
+    let onEachFeature = (feature, layer) => layer.bindPopup(`${longPropName}: ${featPropGetter(feature)}`);
+
+    return {
+        layer: L.geoJSON(moddedGeojson, { style, onEachFeature, legendName }),
+        colors: {
+            propClasses,
+            polygonIdsByColor,
+            getColorForPolygon
+        }
+    }
+}
+
+async function createAndAddChloroplethLayer(jsonPath, shortPropName, longPropName, colorSchemeName, project, addToMap, legendName, mapInst) {
+    let data = await fetch(jsonPath);
+    let geojson = await data.json()
+    let chloropleth = await createChloroplethLayer(geojson, shortPropName, longPropName, colorSchemeName, project, legendName);
+    if (addToMap) chloropleth.layer.addTo(mapInst);
+    return chloropleth;
+}
+
+async function createPointLayer(geojson, color, project, filterFn, labelFn, legendName) {
+    let moddedGeojson = {
+        type: geojson.type,
+        crs: geojson.crs,
+        features: project ? projectFeaturesToWGS84(geojson.features) : geojson.features.filter(filterFn)
+    }
+
+    return {
+        layer: L.geoJSON(moddedGeojson, {
+            pointToLayer: (point, latlng) =>  {
+                let marker = L.circle(latlng, { radius: 3, color });
+                try {
+                    marker.bindTooltip(document.createTextNode(labelFn(point)), { permanent: true, opacity: 0.7 });
+                }
+                catch  (e) {
+                    // debugger;
+                }
+                return marker;
+            },
+            legendName
+        }),
+        color
+    }
+}
+
+async function createAndAddPointLayer(jsonPath, color, project, filterFn, labelFn, addToMap, legendName, mapInst) {
+    let data = await fetch(jsonPath);
+    let geojson = await data.json();
+    let point = await createPointLayer(geojson, color, project, filterFn, labelFn, legendName);
+    if (addToMap) point.layer.addTo(mapInst);
+    return point;
+}
+
+async function main() {
+
+    // add Cambridge-Somerville boundary:
+    // let boundary = await fetch('data/combo/CambridgeSomervilleBoundary.geojson');
+    // let boundaryJSON = await boundary.json();
+    // L.geoJSON(boundaryJSON, { style: { fill: false, color: 'pink' } }).addTo(map);
+
+    // basic testing:
+    let blockGroups = await fetch('data/FL_blck_grp_2017_shape.geojson');
+    let blkGrpJSON = await blockGroups.json();
+    L.geoJSON(blkGrpJSON).addTo(map);
+
+    const pathAliases = {
+        'data/combo/MA_blck_grp_2017_Central.geojson': 'Central (block groups)',
+        'data/combo/MA_blck_grp_2017_Porter.geojson': 'Porter (block groups)',
+        'data/combo/CentralSelection.geojson': 'Central (blocks)',
+        'data/combo/PorterSelection.geojson': 'Porter (blocks)',
+    };
+
+    let chloroLayersData = {
+        'data/combo/MA_blck_grp_2017_Central.geojson': {
+            [propAliases.blkGrpPop]: {
+                legendName: layerAliases.centralPopBlockGroup,
+                longName: 'Total population',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianIncome]: {
+                legendName: layerAliases.centralMedianIncome,
+                longName: 'Median income',
+                addToMap: false
+            },
+            [propAliases.blkGrpPerCapitaIncome]: {
+                legendName: layerAliases.centralPerCapitaIncome,
+                longName: 'Per-capita income',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianRent]: {
+                legendName: layerAliases.centralMedianRent,
+                longName: 'Median gross rent',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianRentPercentIncome]: {
+                legendName: layerAliases.centralMedianRentPercentIncome,
+                longName: 'Median gross rent as a % of income',
+                addToMap: false
+            },
+            [propAliases.blkGrpMeanROWWidths]: {
+                legendName: layerAliases.centralMeanROWWidthsBlockGroup,
+                longName: 'Mean ROW width',
+                addToMap: false,
+                colorScheme: 'YlGn'
+            }
+        },
+        'data/combo/MA_blck_grp_2017_Porter.geojson': {
+            [propAliases.blkGrpPop]: {
+                legendName: layerAliases.porterPopBlockGroup,
+                longName: 'Total population',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianIncome]: {
+                legendName: layerAliases.porterMedianIncome,
+                longName: 'Median income',
+                addToMap: false
+            },
+            [propAliases.blkGrpPerCapitaIncome]: {
+                legendName: layerAliases.porterPerCapitaIncome,
+                longName: 'Per-capita income',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianRent]: {
+                legendName: layerAliases.porterMedianRent,
+                longName: 'Median gross rent',
+                addToMap: false
+            },
+            [propAliases.blkGrpMedianRentPercentIncome]: {
+                legendName: layerAliases.porterMedianRentPercentIncome,
+                longName: 'Median gross rent as a % of income',
+                addToMap: false
+            },
+            [propAliases.blkGrpMeanROWWidths]: {
+                legendName: layerAliases.porterMeanROWWidthsBlockGroup,
+                longName: 'Mean ROW width',
+                addToMap: false,
+                colorScheme: 'YlGn'
+            }
+        },
+        'data/combo/CentralSelection.geojson': {
+            [propAliases.blkPop]: {
+                legendName: layerAliases.centralPopBlock,
+                longName: 'Total population',
+                addToMap: false
+            },
+            [propAliases.blkRenters]: {
+                legendName: layerAliases.centralRenters,
+                longName: 'Renter-occupied housing units',
+                addToMap: false
+            },
+            [propAliases.blkFamilies]: {
+                legendName: layerAliases.centralFamilies,
+                longName: 'Family households',
+                addToMap: false
+            },
+            [propAliases.blkTrees]: {
+                legendName: layerAliases.centralTrees,
+                longName: 'Trees',
+                addToMap: false
+            },
+            [propAliases.blkLights]: {
+                legendName: layerAliases.centralLights,
+                longName: 'Streetlights',
+                addToMap: false
+            },
+            [propAliases.blkMeanROWWidths]: {
+                legendName: layerAliases.centralMeanROWWidthsBlock,
+                longName: 'Mean ROW width',
+                addToMap: true,
+                colorScheme: 'YlGn'
+            }
+        },
+        'data/combo/PorterSelection.geojson': {
+            [propAliases.blkPop]: {
+                legendName: layerAliases.porterPopBlock,
+                longName: 'Total population',
+                addToMap: false
+            },
+            [propAliases.blkRenters]: {
+                legendName: layerAliases.porterRenters,
+                longName: 'Renter-occupied housing units',
+                addToMap: false
+            },
+            [propAliases.blkFamilies]: {
+                legendName: layerAliases.porterFamilies,
+                longName: 'Family households',
+                addToMap: false
+            },
+            [propAliases.blkTrees]: {
+                legendName: layerAliases.porterTrees,
+                longName: 'Trees',
+                addToMap: false
+            },
+            [propAliases.blkLights]: {
+                legendName: layerAliases.porterLights,
+                longName: 'Streetlights',
+                addToMap: false
+            },
+            [propAliases.blkMeanROWWidths]: {
+                legendName: layerAliases.porterMeanROWWidthsBlock,
+                longName: 'Mean ROW width',
+                addToMap: true,
+                colorScheme: 'YlGn'
+            }
+        }
+    };
+
+    // let chloroLayers = Object.assign({}, Object.fromEntries(Object.keys(chloroLayersData).map(key => [key])));
+
+    // for (let [path, layers] of Object.entries(chloroLayersData)) {
+    //     chloroLayers[path] = {};
+    //     for (let [layerPropName, layerOpts] of Object.entries(layers)) {
+    //         chloroLayers[path][layerOpts.legendName] = await createAndAddChloroplethLayer(
+    //                                                             path,
+    //                                                             layerPropName,
+    //                                                             layerOpts.longName,
+    //                                                             layerOpts.colorScheme || 'RdPu',
+    //                                                             false,
+    //                                                             layerOpts.addToMap || false,
+    //                                                             layerOpts.legendName,
+    //                                                             map
+    //                                                          );
+    //     }
+    // }
+
+    // FIXME: filter trees
+    let pointLayersData = {
+        'data/combo/BasketCentral.geojson': {
+            color: '#9e02e9',
+            label: point => point.properties.Min_Price,
+            addToMap: true,
+            filterFn: () => true
+        },
+        'data/combo/CoffeeCentral.geojson': {
+            color: '#ec0000',
+            label: point => point.properties.Price,
+            addToMap: true,
+            filterFn: () => true
+        },
+        'data/combo/BasketPorter.geojson': {
+            color: '#9e02e9',
+            label: point => point.properties.Min_Price,
+            addToMap: true,
+            filterFn: () => true
+        },
+        'data/combo/CoffeePorter.geojson': {
+            color: '#ec0000',
+            label: point => point.properties.Value,
+            addToMap: true,
+            filterFn: () => true
+        }
+    };
+
+    // const pointLayerPropAliases = {
+    //     'data/combo/BasketCentral.geojson': 'Minimum price of a carton of milk (Central)',
+    //     'data/combo/CoffeeCentral.geojson': 'Minimum price of a cup of coffee (Central)',
+    //     'data/combo/BasketPorter.geojson': 'Minimum price of a carton of milk (Porter)',
+    //     'data/combo/CoffeePorter.geojson': 'Minimum price of a cup of coffee (Porter)'
+    // };
+
+    // let pointLayers = Object.assign({}, Object.fromEntries(Object.keys(pointLayersData).map(key => [key])));
+
+    // for (let [path, layerOpts] of Object.entries(pointLayersData)) {
+    //     pointLayers[path] = await createAndAddPointLayer(
+    //                                 path,
+    //                                 layerOpts.color || "blue",
+    //                                 false,
+    //                                 layerOpts.filterFn || (() => true),
+    //                                 layerOpts.label || (() => ""),
+    //                                 layerOpts.addToMap || false,
+    //                                 pointLayerPropAliases[path],
+    //                                 map
+    //                               );
+    // }
+
+    // let baseMap = L.layerGroup();
+    // baseMap.addTo(map);
+
+    // L.control.scale().addTo(map);
+
+    // let overlaysByPath = {
+    //     label: 'Overlays',
+    //     children: []
+    // };
+
+    // for (let [path, props] of Object.entries(chloroLayers)) {
+    //     let childLabel = {
+    //         label: pathAliases[path],
+    //         children: []
+    //     };
+    //     overlaysByPath.children.push(childLabel);
+        // for (let [legendName, layerData] of Object.entries(props)) {
+    //         childLabel.children.push({
+    //             label: legendName,
+    //             layer: layerData.layer
+    //         });
+    //     }
+    // }
+
+    // let commOverlay = {
+    //     label: 'Commercial affordability',
+    //     children: []
+    // };
+    // overlaysByPath.children.push(commOverlay);
+
+    // for (let [path, alias] of Object.entries(pointLayerPropAliases)) {
+    //     commOverlay.children.push({
+    //         label: alias,
+    //         layer: pointLayers[path].layer
+    //     });
+    // }
+
+    const layersControl = L.control.layers.tree(
+        {
+            label: 'Base layers',
+            children: [
+                {
+                    label: 'Dark basemap',
+                    layer: dark
+                },
+                {
+                    label: 'Light basemap',
+                    layer: light
+                }
+            ]
+        },
+        overlaysByPath
+    );
+    layersControl.addTo(map);
+    layersControl.collapseTree(true);
+
+
+    /**
+     * label: 'USA',
+            children: [
+                {
+                    label: 'General',
+                    children: [
+                        { label: 'Nautical', layer: usa_naut },
+                        { label: 'Satellite', layer: usa_sat },
+                        { label: 'Topographical', layer: usa_topo },
+     */
+
+
+    // FIXME: legends for base layers
+    // map.on('baselayerchange', e => {
+    //     if (e.layer.bringToBack) e.layer.bringToBack();
+    // });
+
+    // Legends per layer:
+
+    // let legends = {}; //Object.assign({}, Object.fromEntries(Object.keys(chloroLayersData).map(key => [key])));//, Object.fromEntries(Object.keys(pointLayersData).map(key => [key])));
+
+    // Chloropleth legends
+    // eslint-disable-next-line require-atomic-updates
+    for (let path of Object.values(chloroLayers)) {
+        for (let [legendName, layerData] of Object.entries(path)) {
+            let legend = L.control({ position: 'bottomright' });
+            legend.onAdd = () => {
+                let div = L.DomUtil.create('div', 'info legend');
+                let expanded = true;
+                div.onclick = () => {
+                    expanded = !expanded;
+                    if (expanded) {
+                        Array.from(div.childNodes).filter(node => node.querySelector('i')).forEach(node => node.classList.remove('collapsed'))
+                    }
+                    else {
+                        Array.from(div.childNodes).filter(node => node.querySelector('i')).forEach(node => node.classList.add('collapsed'))
+                    }
+                }
+                let colors = layerData.colors;
+                div.innerHTML += `<div>${legendName}<br/></div>`;
+                for (let i = 1; i < colors.propClasses.length; i++) {
+                    div.innerHTML += `<div><i style="background: ${colors.getColorForPolygon(colors.propClasses[i])}"></i>${colors.propClasses[i]}${colors.propClasses[i+1] ? "-" + colors.propClasses[i+1] + "<br>": "+"}</div>`.trim();
+                }
+                return div;
+            }
+            legends[legendName] = legend;
+        }
+    }
+
+    // Point layer legends
+    // eslint-disable-next-line require-atomic-updates
+    // for (let [path, obj] of Object.entries(pointLayers)) {
+    //     let legend = L.control({ position: 'bottomright' });
+    //     legend.onAdd = () => {
+    //         let div = L.DomUtil.create('div', 'info legend');
+    //         // div.onclick = () => {
+    //         //     map.flyToBounds(obj.layer.getBounds());
+    //         // }
+    //         div.innerHTML += `<div><i style="background: ${obj.color}"></i>${pointLayerPropAliases[path]}</div>`.trim();
+    //         return div;
+    //     }
+    //     legends[pointLayerPropAliases[path]] = legend;
+    // }
+
+    // Enable legends for all layers active at start
+    // chloropleth layers
+    // for (let path of Object.values(chloroLayersData)) {
+    //     for (let [_, data] of Object.entries(path)) {
+    //         if (data.addToMap) { // if map displayed at start
+    //             legends[data.legendName].addTo(map);
+    //         }
+    //     }
+    // }
+
+    // for (let [path, opts] of Object.entries(pointLayersData)) {
+    //     if (opts.addToMap) {
+    //         legends[pointLayerPropAliases[path]].addTo(map);
+    //     }
+    // }
+
+    // for (let [name, data] of Object.entries(pointLayersData)) {
+    //     if (data.slice(-1)[0]) { // if map displayed at start
+    //         legends[name].addTo(map);
+    //     }
+    // }
+
+    // L.Control.GroupedLayers.include({
+    //     getActiveOverlays: function() {
+    //         let active = [];
+    //         for (let obj of this._layers) {
+    //             if (obj.overlay && this._map.hasLayer(obj.layer)) {
+    //                 active.push(obj.layer);
+    //             }
+    //         }
+    //         return active;
+    //     }
+    // });
+
+    // const getActiveOverlaysPerPath = () => {
+    //     let active = layersControl.getActiveOverlays();
+    //     const activeOverlaysPerPath = {}
+    //     for (let [path, propsPerPath] of Object.entries(chloroLayers)) {
+    //         activeOverlaysPerPath[path] = [];
+    //         for (let [prop, obj] of Object.entries(propsPerPath)) {
+    //             if (active.includes(obj.layer)) {
+    //                 activeOverlaysPerPath[path].push(obj);
+    //             }
+    //         }
+    //     }
+    //     return activeOverlaysPerPath;
+    // }
+
+    // const countOverlaysPerPath = (activeOverlaysPerPath) => {
+    //     let overlaysPerPathCount = {};
+    //     for (let [path, overlayObjs] of Object.entries(activeOverlaysPerPath)) {
+    //         overlaysPerPathCount[path] = overlayObjs.length;
+    //     }
+    //     return overlaysPerPathCount;
+    // }
+
+    // let prevLayer;
+
+    // map.on('overlayadd', function(e) {
+    //     // const activeOverlaysPerPath = getActiveOverlaysPerPath();
+    //     // const overlaysPerPathCount = countOverlaysPerPath(activeOverlaysPerPath);
+    //     // for (let [path, overlayCount] of Object.entries(overlaysPerPathCount)) {
+    //     //     if (overlayCount == 2) {
+    //     //         console.log('do something');
+    //     //         // e.layer.setStyle(feat => {
+    //     //         //     return {
+    //     //         //         dashArray: 4
+    //     //         //     }
+    //     //         // });
+    //     //     }
+    //     //     if (overlayCount > 2) {
+    //     //         alert('Cannot have more than 2 overlays per path');
+    //     //         const layerInput = Array.from(layersControl._overlaysList.childNodes).map(node => Array.from(node.querySelectorAll('label:not(.leaflet-control-layers-group-label'))).flat().find(node => node.querySelector('span').innerText == " " + e.name).querySelector('input');
+    //     //         setTimeout(() => layerInput.click(), 0);
+    //     //     }
+    //     // }
+    //     // // debugger;
+    //     map.flyToBounds(e.target.getBounds());
+    //     legends[e.layer.options.legendName].addTo(this);
+    // });
+
+    // map.on('overlayremove', function(e) {
+    //     this.removeControl(legends[e.layer.options.legendName]);
+    // });
+
+    map.flyTo([27.244182, -80.828922], 14, { duration: 3 }); // over Okeechobee
+    window.map = map;
+}
+
+main();

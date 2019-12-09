@@ -1,0 +1,44 @@
+{
+  "name": "food-insecurity-leaflet",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "build": "webpack",
+    "watch": "DEBUG=server:* node server/server.js & node browser-sync"
+  },
+  "author": "Cristian Rios <cristian.rios0719@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.585.0",
+    "chroma-js": "^2.1.0",
+    "colorbrewer": "^1.3.0",
+    "csv-parse": "^4.8.2",
+    "debug": "^4.1.1",
+    "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
+    "fetchql": "^3.0.0",
+    "graphql": "^14.5.8",
+    "highland": "^2.13.5",
+    "iterall": "^1.2.2",
+    "jsonstream": "^1.0.3",
+    "leaflet": "^1.6.0",
+    "leaflet-spin": "^1.1.0",
+    "leaflet.control.layers.tree": "^0.1.1",
+    "oboe": "^2.1.5",
+    "readable-stream": "^3.4.0",
+    "redis": "^2.8.0",
+    "redis-streams": "^1.1.0",
+    "spin.js": "^4.1.0",
+    "through2": "^3.0.1"
+  },
+  "devDependencies": {
+    "browser-sync": "^2.26.7",
+    "bs-fullscreen-message": "^1.1.0",
+    "eslint": "^6.7.0",
+    "shebang-loader": "0.0.1",
+    "strip-ansi": "^6.0.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-middleware": "^3.7.2"
+  }
+}

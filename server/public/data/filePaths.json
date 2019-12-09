@@ -1,0 +1,19 @@
+[{
+    "joinfile": "FL_blck_grp_2017",
+    "groupName": "Florida block groups (2017)",
+    "attribution": "2017 American Community Survey: 5-Year Data [2013-2017, Block Groups & Larger Areas] (NHGIS: 2013_2017_ACS5a)"
+}, {
+    "joinfile": "FL_block_2010",
+    "groupName": "Florida blocks (2010)",
+    "attribution": "2010 Census: SF 1a - P & H Tables [Blocks & Larger Areas] (NHGIS: 2010_SF1a)"
+},
+{
+    "joinfile": "MA_block_2010",
+    "groupName": "Massachusetts blocks (2010)",
+    "attribution": "n/a"
+},
+{
+    "joinfile": "MA_blck_grp_2017",
+    "groupName": "Massachusetts block groups (2017)",
+    "attribution": "n/a"
+}]
