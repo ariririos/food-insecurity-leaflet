@@ -111,3 +111,6 @@ dist
 
 # Join output
 join/
+
+# AWS rootkey
+rootkey.csv
