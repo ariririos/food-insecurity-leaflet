@@ -6,7 +6,7 @@ import createChloroStyle from './createChloroStyle';
 import callbackToAsyncIterator from '../lib/callback-to-async-iterator';
 
 export default async function loadChloroFeats(map) {
-    const chloroPropsByFilePath = {};
+    const chloroPropsByFilePath = {}, completedFeatures = [];
     // FIXME: instead of doing this in sequence, could do it in parallel (Promise?)
     // and return when the slowest layer has completed
     for (let fileObj of filePaths) {
@@ -40,7 +40,8 @@ export default async function loadChloroFeats(map) {
 
         for await (let feature of features) {
             feats.push(feature);
-            layerGroup.addData(feature);
+            // layerGroup.addData(feature); // FIXME: basic functionality
+            completedFeatures.push(feature);
         }
 
         for (let [propName, propObj] of Object.entries(props)) {
@@ -48,5 +49,5 @@ export default async function loadChloroFeats(map) {
         }
 
     }
-    return chloroPropsByFilePath;
+    return { chloroPropsByFilePath, completedFeatures };
 }

@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import debugFn from 'debug';
 import loadChloroFeats from './loadChloroFeats';
+import createRasterOverlay from './createRasterOverlay';
 import createLegend from './createLegend';
 import addLayerControl from './addLayerControl';
 // import fetchql from 'fetchql';
@@ -17,6 +18,7 @@ const mapboxToken = "pk.eyJ1IjoicmlvYzA3MTkiLCJhIjoiY2sydTA3NmlsMWgydDNtbWJueDcz
 
 async function main() {
     // Set up Leaflet map
+
     let map = L.map('map', {
         // center: [27.346153994505922, -81.01318359375001], // over the lake
         center: [27.53262936554833, -83.73779296875001], // over Florida
@@ -41,7 +43,11 @@ async function main() {
     // Load data
     debug('Loading data...');
 
-    const chloroPropsByFilePath = await loadChloroFeats(map);
+    const { chloroPropsByFilePath, completedFeatures } = await loadChloroFeats(map);
+
+    debug('Creating raster overlay...');
+
+    const _rasterOverlay = await createRasterOverlay(completedFeatures, map);
 
     debug('Adding legends...');
 
@@ -75,21 +81,19 @@ async function main() {
         }))
     };
 
-    // for (let feat of storeGeoJSON.features) {
-    //     const isochroneData = await fetch(`https://api.mapbox.com/isochrone/v1/mapbox/walking/${feat.coordinates[0][0][0]},${feat.coordinates[0][0][1]}?contours_minutes=30&polygons=true&access_token=${mapboxToken}`);
-    //     const isochroneJSON = await isochroneData.json();
-    //     L.geoJSON(isochroneJSON, { style: { fillColor: "green", fillOpacity: 0.25, color: "darkgreen" } }).addTo(map);
-    // }
-
-    // let isochroneData = await fetch("https://api.mapbox.com/isochrone/v1/mapbox/driving/-80.845932,27.243660?contours_minutes=5&polygons=true&access_token=pk.eyJ1IjoicmlvYzA3MTkiLCJhIjoiY2sydTA3NmlsMWgydDNtbWJueDczNTVyYSJ9.OXt2qQjXDCMVpDZA5pf3gw");
-
-    // let isochroneJSON = await isochroneData.json();
+    /*
+    for (let feat of storeGeoJSON.features) {
+        const isochroneData = await fetch(`https://api.mapbox.com/isochrone/v1/mapbox/walking/${feat.coordinates[0][0][0]},${feat.coordinates[0][0][1]}?contours_minutes=30&polygons=true&access_token=${mapboxToken}`);
+        const isochroneJSON = await isochroneData.json();
+        L.geoJSON(isochroneJSON, { style: { fillColor: "green", fillOpacity: 0.25, color: "darkgreen" } }).addTo(map);
+    }
+    */
 
     L.geoJSON(storeGeoJSON, { style: { fillColor: "red", fillOpacity: 0.25, color: "darkred" } }).addTo(map);
     map.spin(false);
 
     // Fly to over Okeechobee
-    map.flyTo([27.30162153777399, -80.91979980468751], 10, { duration: 3 }); // over Okeechobee
+    // map.flyTo([27.30162153777399, -80.91979980468751], 12, { duration: 5 }); // over Okeechobee FIXME: basic functionality
 }
 
 main();
